@@ -14,24 +14,19 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn.feature_extraction.text import CountVectorizer
 import requests
+import telebot
+from telebot import *
+import io
+import traceback
 
 nltk.download('punkt')
 nltk.download('stopwords')
 stop_words = set(stopwords.words('russian'))
-
 sns.color_palette("tab10")
 sns.set(style="whitegrid")
 
-
-import telebot
-from telebot import *
-#from person_lang_def_files import plot_all_graphs
-import io
-import traceback
-
 TOKEN='6954819921:AAHVZw4_nZ36dU7iqnucWBbsyPeP4CSgrUY'
 bot = telebot.TeleBot(TOKEN)
-
 morph = pymorphy2.MorphAnalyzer()
 m = Mystem(disambiguation=False)
 
@@ -65,7 +60,7 @@ def len_sent(tdf):
     tdf['word_per_sent'] = tdf['word_count']/tdf['sent_count']
     word_per_sent = tdf['word_per_sent'].mean()
     return round(word_per_sent) 
-# print(f'-------СРЕДНЕЕ КОЛИЧЕСТВО СЛОВ В ПРЕДЛОЖЕНИИ РАВНО ~ {round(word_per_sent)}--------') 
+
 
 def plot_dirty(tdf, ax):
     count_vect_total = CountVectorizer(ngram_range=(1,1), min_df=5)
@@ -147,7 +142,7 @@ def uniq_words_share(tdf,stoplst):
     return (uniq_words/words) * 100
 
 
-def process_and_visualize(stop_words, tdf, ax):
+def process_and_visualize(stop_words, tdf):
     text = str(tdf['text'].values)
     
     def pre_process(text):
@@ -160,7 +155,6 @@ def process_and_visualize(stop_words, tdf, ax):
         sub_str = 'sfgff'
         text = text[:text.find(sub_str)]
         return text
-        
 
     morph = pymorphy2.MorphAnalyzer()
 
@@ -170,15 +164,12 @@ def process_and_visualize(stop_words, tdf, ax):
 
     Fdist = FreqDist(lemmatized_text)
 
-    #top = Fdist.plot(20, cumulative=False)
-
     not_most_common = Fdist.most_common()[-21:-1]
-    #plt.title("---Топ редких слов:---")
-    not_most_common = pd.DataFrame(not_most_common)
-    not_most_common.plot(x=0, y=1, ax=ax, rot=0, kind='barh', legend=False).set_title('TОП РЕДКИХ СЛОВ')
+    rare_words = [i[0] for i in not_most_common]
+
     
 
-    return not_most_common
+    return ', '.join(str(w) for w in rare_words)
 
 
 # top pos:
@@ -243,7 +234,7 @@ def plot_top_names(tdf, ax):
 
 
 def create_plot():
-    fig, axs = plt.subplots(nrows=3, ncols=2, figsize=(18.5, 14), layout="constrained")
+    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(18.5, 14), layout="constrained")
     return fig, axs
 
 
@@ -261,14 +252,14 @@ def plot_all_graphs(axs, html_content): #fig
 
     messages=messages = [f'Обработано постов блога: {len(tdf)}', 
                          f"Среднее кол-во слов в предложении ~ {len_sent(tdf)},",
-                         f"Доля уникальных слов составляет ~ {uniq_words_share(tdf,stop_words)}"]
+                         f"Доля уникальных слов составляет ~ {round(uniq_words_share(tdf,stop_words))}%",
+                         f"Список 20-ти редко встречающихся слов: {process_and_visualize(stop_words, tdf)}"]
 
     plot_clean(tdf,stop_words, axs[0, 0])
     # Вызовите остальные функции и передайте им соответствующий объект ax
     plot_dirty(tdf, axs[0, 1])
     plot_pos(tdf, axs[1, 0])
-    process_and_visualize(stop_words, tdf, axs[1, 1])
-    plot_top_names(tdf, axs[2, 0])
+    plot_top_names(tdf, axs[1, 1])
     #fig.tight_layout()
     
     return messages#, fig
@@ -342,7 +333,6 @@ def process_html_file(message):
         html_content=response.content.decode('utf-8')
         print('Файл загружен в память')
         
-        # Удаляем временный файл
         fig, axs = create_plot()  
         messages = plot_all_graphs(axs, html_content) 
 
