@@ -298,7 +298,7 @@ def mode_router(message):
 
 def send_instruction(message):
     try:
-        with open('/Users/niknovikov/Desktop/bot_vkr/инструкция тг.pdf', 'rb') as file:
+        with open('source/инструкция тг.pdf', 'rb') as file:
             bot.send_document(message.chat.id, file)
         change_mode(message)
     except Exception as e:
